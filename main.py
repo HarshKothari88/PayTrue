@@ -141,101 +141,55 @@ def fetchDetails():
     Returns extracted details if they match, raises error if they don't.
     """
     # Validate file presence with custom exception
-    if 'file1' not in request.files:
-        raise CustomFileNotFoundError(
-            message="First file (file1) is missing from the request",
-            status_code=404
-        )
+    if 'file1' not in request.files or 'file2' not in request.files:
+        raise CustomFileNotFoundError("Both files (file1 and file2) are required", status_code=404)
     
-    if 'file2' not in request.files:
-        raise CustomFileNotFoundError(
-            message="Second file (file2) is missing from the request",
-            status_code=404
-        )
-
     file1 = request.files['file1']
     file2 = request.files['file2']
 
-    # Validate file contents
-    if file1.filename == '':
-        raise CustomFileNotFoundError(
-            message="First file is empty or no file was selected",
-            status_code=404
-        )
-    
-    if file2.filename == '':
-        raise CustomFileNotFoundError(
-            message="Second file is empty or no file was selected",
-            status_code=404
-        )
+    # Check if files are empty
+    if not file1.filename or not file2.filename:
+        raise CustomFileNotFoundError("Both files must be provided and not empty", status_code=404)
 
-    # Save uploaded files temporarily
+    # Save files temporarily
     timestamp = datetime.now().timestamp()
     file1_path = os.path.join(Config.TEMP_DIR, secure_filename(f"file1_{timestamp}"))
     file2_path = os.path.join(Config.TEMP_DIR, secure_filename(f"file2_{timestamp}"))
     
     try:
-        # Handle file saving errors
-        try:
-            file1.save(file1_path)
-        except Exception as e:
-            raise CustomFileNotFoundError(
-                message=f"Error saving first file: {str(e)}",
-                status_code=404
-            )
+        file1.save(file1_path)
+        file2.save(file2_path)
 
-        try:
-            file2.save(file2_path)
-        except Exception as e:
-            raise CustomFileNotFoundError(
-                message=f"Error saving second file: {str(e)}",
-                status_code=404
-            )
-
-        # Extract details from both files
+        # Extract details
         details1, error1 = ocr_details_extractor.process_file(file1_path)
-        if error1:
-            raise AuthenticationError(f"Error processing first file: {error1}")
-
         details2, error2 = ocr_details_extractor.process_file(file2_path)
-        if error2:
-            raise AuthenticationError(f"Error processing second file: {error2}")
-
-        # Validate that required fields were extracted
-        if not details1.get('full_name') or not details1.get('address'):
-            raise AuthenticationError("Could not extract required details from first file")
-        if not details2.get('full_name') or not details2.get('address'):
-            raise AuthenticationError("Could not extract required details from second file")
-
-        # Parse addresses into structured format for storage
-        parsed_address1 = parse_address(details1['address'])
-        parsed_address2 = parse_address(details2['address'])
-
-        # Compare details
-        name_match = details1['full_name'].lower().strip() == details2['full_name'].lower().strip()
         
-        # Normalize addresses for comparison by removing extra spaces and converting to lowercase
-        def normalize_address(address_str):
-            return ' '.join(address_str.lower().split())
+        if error1 or error2:
+            raise AuthenticationError("Error processing one or both files")
 
-        # Compare complete addresses as strings
-        address1_normalized = normalize_address(details1['address'])
-        address2_normalized = normalize_address(details2['address'])
+        if not details1.get('full_name') or not details1.get('address') or \
+           not details2.get('full_name') or not details2.get('address'):
+            raise AuthenticationError("Required details (full_name and address) missing in one or both files")
+
+        # Normalize and compare details
+        name_match = details1['full_name'].strip().lower() == details2['full_name'].strip().lower()
+        address1_normalized = ' '.join(details1['address'].lower().split())
+        address2_normalized = ' '.join(details2['address'].lower().split())
         address_match = address1_normalized == address2_normalized
 
         if not (name_match and address_match):
-            raise AuthenticationError("Details from the two files do not match")
+            raise AuthenticationError("Name or address details do not match between the two files")
 
-        # Return success response with matched details
+        # Return matched details in structured response
         return create_success_response({
             'message': 'Details matched successfully',
             'details': {
                 'full_name': details1['full_name'],
-                'address': parsed_address1,  # Return structured address for storage/display
+                'address': parse_address(details1['address']),  # Return structured address
             },
             'verification': {
-                'name_match': True,
-                'address_match': True
+                'name_match': name_match,
+                'address_match': address_match
             }
         })
 
@@ -243,10 +197,8 @@ def fetchDetails():
         # Cleanup temporary files
         for filepath in [file1_path, file2_path]:
             if os.path.exists(filepath):
-                try:
-                    os.remove(filepath)
-                except Exception as e:
-                    print(f"Error removing temporary file {filepath}: {str(e)}")
+                os.remove(filepath)
+
 
 # App Route for best time to exchange currency
 @app.route('/api/get_exchange_recommendation', methods=['POST'])
