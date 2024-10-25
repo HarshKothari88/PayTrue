@@ -1,0 +1,7 @@
+/Include
+/Lib
+/scripts
+/share
+*.cfg
+*.env
+/Files/uploads

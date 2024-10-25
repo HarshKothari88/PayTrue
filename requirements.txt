@@ -1,0 +1,8 @@
+fastapi 
+uvicorn 
+opencv-python-headless 
+dlib 
+pytesseract 
+SpeechRecognition
+websockets
+face_recognition

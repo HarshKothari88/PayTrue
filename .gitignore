@@ -1,0 +1,54 @@
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+.Python
+env/
+.venv/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Python test and coverage
+.coverage
+.coverage.*
+nosetests.xml
+*.cover
+*.py,cover
+*.test
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Any temporary files
+*.tmp
+*.temp
+
+# Sensitive data
+*.env
+*.local
+
+# Other
+*.sqlite3
+*.db
+test/
