@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify # type: ignore
 from flask_cors import cross_origin,CORS # type: ignore
 
 
-from contollers.auth.Authentication import addUser,loginUser,verifyUser
+from contollers.auth.Authentication import addUser,loginUser,verifyUser,parseUser
 
 app = Flask(__name__)
 CORS(app)
@@ -21,8 +21,8 @@ def add_user_route():
         response, status_code = addUser(request)
         if "uid" in response:
             response["uid"] = str(response["uid"])
-        if "userData" in response and "_id" in response["userData"]:
-            response["userData"]["_id"] = str(response["userData"]["_id"])
+        if "data" in response and "_id" in response["data"]:
+            response["data"]["_id"] = str(response["data"]["_id"])
     
     except Exception as e:
         response = {"error": str(e)}
@@ -41,12 +41,21 @@ def login_route():
         return jsonify(response), 400
         
 
-
 @app.route('/api/verify', methods=['GET'])
 def verify_route():
     id = request.args.get('uid')
     try:
         response, status_code = verifyUser(id)
+    except Exception as e:
+        response = {"error": str(e)}
+        status_code = 500
+    return jsonify(response), status_code
+
+@app.route('/api/parseaddress', methods=['GET'])
+def parse_address():
+    id = request.args.get('uid')
+    try:
+        response, status_code = parseUser(id)
     except Exception as e:
         response = {"error": str(e)}
         status_code = 500
