@@ -1,0 +1,9 @@
+/Include
+/Lib
+/scripts
+/share
+*.cfg
+*.env
+*__pycache__
+/Files/uploads
+/Files/data
