@@ -13,6 +13,7 @@ venv.bak/
 *.egg-info/
 dist/
 build/
+SERVER/Files/data
 
 # IDE and editor files
 .vscode/
