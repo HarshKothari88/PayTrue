@@ -140,64 +140,97 @@ def fetchDetails():
     Extract and compare details from two uploaded files (images or PDFs).
     Returns extracted details if they match, raises error if they don't.
     """
-    # Validate file presence with custom exception
-    if 'file1' not in request.files or 'file2' not in request.files:
-        raise CustomFileNotFoundError("Both files (file1 and file2) are required", status_code=404)
-    
-    file1 = request.files['file1']
-    file2 = request.files['file2']
-
-    # Check if files are empty
-    if not file1.filename or not file2.filename:
-        raise CustomFileNotFoundError("Both files must be provided and not empty", status_code=404)
-
-    # Save files temporarily
-    timestamp = datetime.now().timestamp()
-    file1_path = os.path.join(Config.TEMP_DIR, secure_filename(f"file1_{timestamp}"))
-    file2_path = os.path.join(Config.TEMP_DIR, secure_filename(f"file2_{timestamp}"))
-    
     try:
-        file1.save(file1_path)
-        file2.save(file2_path)
-
-        # Extract details
-        details1, error1 = ocr_details_extractor.process_file(file1_path)
-        details2, error2 = ocr_details_extractor.process_file(file2_path)
+        # Add logging for debugging
+        app.logger.info("Received files:")
+        app.logger.info(f"File1: {request.files['file1'].filename}")
+        app.logger.info(f"File2: {request.files['file2'].filename}")
         
-        if error1 or error2:
-            raise AuthenticationError("Error processing one or both files")
+        # Validate file presence
+        if 'file1' not in request.files or 'file2' not in request.files:
+            raise CustomFileNotFoundError("Both files (file1 and file2) are required")
+        
+        file1 = request.files['file1']
+        file2 = request.files['file2']
+        
+        # Check if files are empty
+        if not file1.filename or not file2.filename:
+            raise CustomFileNotFoundError("Both files must be provided and not empty")
+            
+        # Add logging for file types
+        app.logger.info(f"File1 content type: {file1.content_type}")
+        app.logger.info(f"File2 content type: {file2.content_type}")
 
-        if not details1.get('full_name') or not details1.get('address') or \
-           not details2.get('full_name') or not details2.get('address'):
-            raise AuthenticationError("Required details (full_name and address) missing in one or both files")
+        # Create temp directory if it doesn't exist
+        os.makedirs(Config.TEMP_DIR, exist_ok=True)
 
-        # Normalize and compare details
-        name_match = details1['full_name'].strip().lower() == details2['full_name'].strip().lower()
-        address1_normalized = ' '.join(details1['address'].lower().split())
-        address2_normalized = ' '.join(details2['address'].lower().split())
-        address_match = address1_normalized == address2_normalized
+        # Save files with proper extensions
+        timestamp = datetime.now().timestamp()
+        file1_path = os.path.join(Config.TEMP_DIR, secure_filename(f"file1_{timestamp}.pdf"))
+        file2_path = os.path.join(Config.TEMP_DIR, secure_filename(f"file2_{timestamp}.pdf"))
+        
+        try:
+            file1.save(file1_path)
+            file2.save(file2_path)
+            
+            app.logger.info(f"Files saved to: {file1_path} and {file2_path}")
+            
+            # Add logging before processing
+            app.logger.info("Starting OCR processing...")
+            
+            # Extract details
+            details1, error1 = ocr_details_extractor.process_file(file1_path)
+            app.logger.info(f"File1 processing result - Details: {details1}, Error: {error1}")
+            
+            details2, error2 = ocr_details_extractor.process_file(file2_path)
+            app.logger.info(f"File2 processing result - Details: {details2}, Error: {error2}")
+            
+            if error1 or error2:
+                raise AuthenticationError(f"Error processing files: File1: {error1}, File2: {error2}")
 
-        if not (name_match and address_match):
-            raise AuthenticationError("Name or address details do not match between the two files")
+            if not details1.get('full_name') or not details1.get('address') or \
+               not details2.get('full_name') or not details2.get('address'):
+                raise AuthenticationError("Required details (full_name and address) missing in one or both files")
 
-        # Return matched details in structured response
-        return create_success_response({
-            'message': 'Details matched successfully',
-            'details': {
-                'full_name': details1['full_name'],
-                'address': parse_address(details1['address']),  # Return structured address
-            },
-            'verification': {
-                'name_match': name_match,
-                'address_match': address_match
-            }
-        })
+            # Normalize and compare details
+            name_match = details1['full_name'].strip().lower() == details2['full_name'].strip().lower()
+            print(details1)
+            address1_normalized = ' '.join(details1['address'].lower().split())
+            address2_normalized = ' '.join(details2['address'].lower().split())
+            address_match = address1_normalized == address2_normalized
 
-    finally:
-        # Cleanup temporary files
-        for filepath in [file1_path, file2_path]:
-            if os.path.exists(filepath):
-                os.remove(filepath)
+            if not name_match:
+                raise AuthenticationError("Name does not match between the two files")
+
+            return create_success_response({
+                'message': 'Details matched successfully',
+                'details': {
+                    'full_name': details1['full_name'],
+                    'address': parse_address(details1['address']),
+                },
+                'verification': {
+                    'name_match': name_match,
+                    'address_match': address_match
+                }
+            })
+
+        except Exception as e:
+            app.logger.error(f"Error processing files: {str(e)}")
+            raise AuthenticationError(f"Error processing files: {str(e)}")
+            
+        finally:
+            # Cleanup temporary files
+            for filepath in [file1_path, file2_path]:
+                if os.path.exists(filepath):
+                    try:
+                        os.remove(filepath)
+                        app.logger.info(f"Cleaned up file: {filepath}")
+                    except Exception as e:
+                        app.logger.error(f"Error cleaning up file {filepath}: {str(e)}")
+
+    except Exception as e:
+        app.logger.error(f"Error in fetchDetails: {str(e)}")
+        raise
 
 
 # App Route for best time to exchange currency

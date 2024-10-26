@@ -1,16 +1,15 @@
 import random
-import string
 import time
-from typing import Dict, Optional
+from typing import Dict
 
 class CodeGenerator:
-    def __init__(self, code_length: int = 6):
+    def __init__(self, code_length: int = 4):
         self.code_length = code_length
         self.active_codes: Dict[str, float] = {}
     
     def generate_code(self, expiry_seconds: int = 300) -> str:
-        """Generate a random alphanumeric code."""
-        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=self.code_length))
+        """Generate a random 4-digit numeric code."""
+        code = ''.join(random.choices('0123456789', k=4))
         self.active_codes[code] = time.time() + expiry_seconds
         return code
     
