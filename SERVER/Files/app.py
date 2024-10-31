@@ -10,7 +10,6 @@ CORS(app)
 @app.route('/',methods=['GET'])
 def home():
     return "<H1>PayTrue Server API - Homepage</H1>"
-
 '''
     USER AUTHENTICATION & VERIFICATION
 '''

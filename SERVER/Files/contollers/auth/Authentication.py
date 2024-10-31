@@ -119,7 +119,7 @@ def addUser(user_data):
         # Insert user data into the database
         result = userCollection.insert_one(finalUserData)
 
-        walletResult = walletCollection.insert_one({"uid": str(result.inserted_id), "balance": [{"amount": 0, "currency": "INR"}, {"amount": 0, "currency": "USD"}, {"amount": 0, "currency": "EUR"}, {"amount": 0, "currency": "GBP"}, {"amount": 0, "currency": "JPY"}, {"amount": 0, "currency": "CNY"}]})
+        walletResult = walletCollection.insert_one({"uid": str(result.inserted_id), "balance": [{"amount": 2000, "currency": "INR"}, {"amount": 400, "currency": "USD"}, {"amount": 300, "currency": "EUR"}, {"amount": 200, "currency": "GBP"}, {"amount": 100, "currency": "JPY"}, {"amount": 50, "currency": "CNY"}]})
 
         finalUserData['id'] = str(result.inserted_id)
         finalUserData['walletId'] = str(walletResult.inserted_id)
@@ -578,7 +578,7 @@ def doKYC(request):
         response = requests.get(URL)
         if response.status_code!= 200:
             return {"message": "Failed to generate KYC code"}, 500
-        code = response.json()['data']['verification_code']
+        code = response.json()['verification_code']
         return {
             "success": True,
             "data":{
